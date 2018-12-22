@@ -1766,3 +1766,72 @@ float f = static_cast<float>(i1) / i2;
 ```
 
 The main advantage of static_cast is that it provides compile-time type checking.
+
+## 4.4b `std::string`
+
+```cpp
+#include <string>
+#include <iostream>
+
+int main()
+{
+    std::cout << "Enter your full name: ";
+    std::string name;
+    std::cin >> name; // this won't work as expected since std::cin breaks on whitespace
+
+    std::cout << "Enter your age: ";
+    std::string age;
+    std::cin >> age;
+
+    std::cout << "Your name is " << name << " and your age is " << age;
+}
+
+// output
+// Enter your full name: John Doe
+// Enter your age: Your name is John and your age is Doe
+```
+
+> operator ``>>`` only returns characters up to the first whitespace it encounters. Any other characters are left inside `cin`, waiting for the next extraction.
+
+Use `std::getline()` to input text
+
+```cpp
+std::cout << "Enter your full name: ";
+std::string name;
+std::getline(std::cin, name); // read a full line of text into name
+
+std::cout << "Enter your age: ";
+std::string age;
+std::getline(std::cin, age); // read a full line of text into age
+
+std::cout << "Your name is " << name << " and your age is " << age;
+```
+
+Mixing inputs with both `std::cin` and `std::getline` may cause some unexpected behavior.
+
+`cin` actually gets the string "2\n" with new line char. It then extracts the `2` to variable `choice`, leaving the newline stuck in the input stream. Then, __when `std::getline()` goes to read the name, it sees ``\n` is already in the stream__, and figures we must have entered an empty string!
+
+> A good rule of thumb is that after reading a value with `std::cin`, remove the newline from the stream.
+
+```cpp
+int main()
+{
+  std::cout << "Pick 1 or 2: ";
+  int choice { 0 };
+  std::cin >> choice;
+
+  std::cin.ignore(32767, '\n'); // ignore up to 32767 characters until a \n is removed
+
+  std::cout << "Now enter your name: ";
+  std::string name;
+  std::getline(std::cin, name);
+
+  std::cout << "Hello, " << name << ", you picked " << choice << '\n';
+
+  return 0;
+}
+
+// instead of cin.ignore, use better one
+#include <limits>
+std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // ignore unlimited characters until a \n is removed
+```
