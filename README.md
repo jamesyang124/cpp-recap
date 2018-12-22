@@ -1835,3 +1835,44 @@ int main()
 #include <limits>
 std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // ignore unlimited characters until a \n is removed
 ```
+
+## 4.5 Enumeration
+
+An enumerated type (also called an enumeration) is a data type where every possible value is defined as a symbolic constant (called an enumerator).
+
+```cpp
+// Define a new enumeration named Color
+enum Color
+{
+    // Here are the enumerators
+    // These define all the possible values this type can hold
+    // Each enumerator is separated by a comma, not a semicolon
+    COLOR_BLACK,
+    COLOR_RED,
+    COLOR_BLUE,
+    COLOR_GREEN,
+    COLOR_WHITE,
+    COLOR_CYAN,
+    COLOR_YELLOW,
+    COLOR_MAGENTA, // see note about trailing comma on the last enumerator below
+}; // however the enum itself must end with a semicolon
+
+// Define a few variables of enumerated type Color
+Color paint = COLOR_WHITE;
+Color house(COLOR_BLUE);
+Color apple { COLOR_RED };
+```
+
+__Defining an enumeration (or any user-defined data type) does not allocate any memory__. When a variable of the enumerated type is defined (such as variable paint in the example above), memory is allocated for that variable at that time.
+
+#### Enumerator values
+
+__Each enumerator is automatically assigned an integer value based on its position in the enumeration list__, value default start from 0. It can be assigned.
+
+```cpp
+Color paint(COLOR_WHITE);
+std::cout << paint;
+
+// output
+// 4
+```
