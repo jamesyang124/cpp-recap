@@ -1865,6 +1865,8 @@ Color apple { COLOR_RED };
 
 __Defining an enumeration (or any user-defined data type) does not allocate any memory__. When a variable of the enumerated type is defined (such as variable paint in the example above), memory is allocated for that variable at that time.
 
+> when an l-value assigned to enum r-value, memory allocated.
+
 #### Enumerator values
 
 __Each enumerator is automatically assigned an integer value based on its position in the enumeration list__, value default start from 0. It can be assigned.
@@ -1876,3 +1878,92 @@ std::cout << paint;
 // output
 // 4
 ```
+
+These integer values can be positive or negative and can share the same value as other enumerators. __Any non-defined enumerators are given a value one greater than the previous enumerator__.
+
+```cpp
+// define a new enum named Animal
+enum Animal
+{
+    ANIMAL_CAT = -3,
+    ANIMAL_DOG, // assigned -2
+    ANIMAL_PIG, // assigned -1
+    ANIMAL_HORSE = 5,
+    ANIMAL_GIRAFFE = 5, // shares same value as ANIMAL_HORSE
+    ANIMAL_CHICKEN // assigned 6
+};
+```
+
+Note in this case, `ANIMAL_HORSE` and `ANIMAL_GIRAFFE` have been given the same value. When this happens, the enumerations become non-distinct. essentially, `ANIMAL_HORSE` and `ANIMAL_GIRAFFE` are interchangeable
+
+> Rule: Don’t assign the same value to two enumerators in the same enumeration unless there’s a very good reason.
+
+Because enumerated values evaluate to integers, they can be assigned to integer variables. This means they can also be output (as integers), since `std::cout` knows how to output integers.
+
+```cpp
+int mypet = ANIMAL_PIG;
+std::cout << ANIMAL_HORSE; // evaluates to integer before being passed to std::cout
+
+// output: 5
+```
+
+assign enumerators from one enum type to another enum type will cause a compile error, or workaround by casting from `int`:
+
+```cpp
+Animal animal = 5; // will cause compiler error
+
+Color color = static_cast<Color>(5); // ugly
+```
+
+The compiler also will not let you input an enum using `std::cin` due to disallowed type coercion, but once again, `static_cast` to enum type from `int` would be accepted.
+
+__Each enumerated type is considered a distinct type__. Consequently, trying to assign enumerators from one enum type to another enum type will cause a compile error:
+
+```cpp
+// COLOR_BLUE is from enum Color
+Animal animal = COLOR_BLUE; // will cause compiler error
+```
+
+Enum is good as a replacement for magic number switch/case, conditional branch handling.
+
+## 4.5a Enum Class
+
+This is definitely not as desired since `color` and `fruit` are from different enumerations and are not intended to be comparable!
+
+With standard enumerators, there’s no way to prevent comparing enumerators from different enumerations.
+
+C++11 defines a new concept, the `enum class` (also called a scoped enumeration), __which makes enumerations both strongly typed and strongly scoped__.
+
+```cpp
+#include <iostream>
+int main()
+{
+    enum class Color // "enum class" defines this as a scoped enumeration instead of a standard enumeration
+    {
+        RED, // RED is inside the scope of Color
+        BLUE
+    };
+
+    enum class Fruit
+    {
+        BANANA, // BANANA is inside the scope of Fruit
+        APPLE
+    };
+
+    Color color = Color::RED; // note: RED is not directly accessible any more, we have to use Color::RED
+    Fruit fruit = Fruit::BANANA; // note: BANANA is not directly accessible any more, we have to use Fruit::BANANA
+
+    if (color == fruit) // compile error here, as the compiler doesn't know how to compare different types Color and Fruit
+        std::cout << "color and fruit are equal\n";
+    else
+        std::cout << "color and fruit are not equal\n";
+
+    return 0;
+}
+```
+
+also the type coercion from scoped enum type to `int` is unavailable, only casting allowed.
+
+> Also, just in case you ever run into it, __enum struct__ is equivalent to __enum class__. But this usage is not recommended and is not commonly used.
+
+## 4.6 Type aliases
