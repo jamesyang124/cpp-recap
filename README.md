@@ -1966,4 +1966,353 @@ also the type coercion from scoped enum type to `int` is unavailable, only casti
 
 > Also, just in case you ever run into it, __enum struct__ is equivalent to __enum class__. But this usage is not recommended and is not commonly used.
 
-## 4.6 Type aliases
+## 4.6 Typedefs and type aliases
+
+Typedefs allow the programmer to create an alias for a data type, and use the aliased name instead of the actual type name.
+
+```cpp
+typedef double distance_t; // define distance_t as an alias for type double
+
+// The following two statements are equivalent:
+double howFar;
+distance_t howFar;
+```
+
+By convention, typedef names are declared using a `_t` suffix.
+
+#### Using typedefs for legibility
+
+Data type names such as `char`, `int`, `long`, `double`, and `bool` are good for describing what type a function returns, but more often we want to know what purpose a return value serves.
+
+```cpp
+typedef int testScore_t;
+testScore_t GradeTest();
+```
+
+#### Using typedefs for easier code maintenance
+
+Precaution is necessary when changing the type of a typedef to a type in a different type family.
+
+One big advantage of typedefs is that they can be used to hide platform specific details. On some platforms, an integer is 2 bytes, and on others, it is 4. Thus, using int to store more than 2 bytes of information can be potentially dangerous when writing platform independent code.
+
+```cpp
+#ifdef INT_2_BYTES
+typedef char int8_t;
+typedef int int16_t;
+typedef long int32_t;
+#else
+typedef char int8_t;
+typedef short int16_t;
+typedef int int32_t;
+#endif
+```
+
+On machines where integers are only 2 bytes, `INT_2_BYTES` can be `#defined`, and the program will be compiled with the top set of typedefs. On machines where integers are 4 bytes, leaving `INT_2_BYTES` undefined will cause the bottom set of typedefs to be used.
+
+In C++11, this is actually how the fixed width integers (like `int8_t`) were defined! As a side-effect of the fact that `int8_t` is actually a typedef of `char`, the following code acts somewhat unexpectedly:
+
+```cpp
+#include <cstdint> // for fixed-width integers
+#include <iostream>
+
+int main()
+{
+    std::int8_t i(97); // int8_t is actually a typedef for char
+    std::cout << i;
+
+    return 0;
+}
+// output: a
+```
+
+not `97`, because `std::cout` prints char as an ASCII character, not a number.
+
+#### Using typedefs to make complex types simple
+
+```cpp
+// original
+std::vector<std::pair<std::string, int> > pairlist;
+
+bool hasDuplicates(std::vector<std::pair<std::string, int> > pairlist)
+{
+    // some code here
+}
+
+// with typedef
+typedef std::vector<std::pair<std::string, int> > pairlist_t; // make pairlist_t an alias for this crazy type
+
+pairlist_t pairlist; // instantiate a pairlist_t
+
+bool hasDuplicates(pairlist_t pairlist) // use pairlist_t in a function parameter
+{
+    // some code here
+}
+```
+
+#### Type aliases in C++11
+
+1. It’s easy to forget whether the type name or type definition come first.
+
+2. The syntax for typedefs gets ugly with more complex types.
+
+In C++11, this can be declared as:
+
+```cpp
+typedef double distance_t; // define distance_t as an alias for type double
+
+// c++ 11 syntax
+using distance_t = double; // define distance_t as an alias for type double
+```
+
+> Rule: Favor type aliases over typedefs if your compiler is C++11 compatible.
+
+## 4.7 Struct
+
+C++ allows us to create our own user-defined aggregate data types.
+
+An aggregate data type is a data type that groups multiple individual variables together. One of the simplest aggregate data types is the `struct`.
+
+A struct (short for structure) allows us to group variables of mixed data types together into a single unit.
+
+```cpp
+struct Employee
+{
+    short id;
+    int age;
+    double wage;
+};
+```
+
+Keep in mind that `Employee` is just a declaration, even though we are telling the compiler that the struct will have member variables, __no memory is allocated at this time__. By convention, struct names start with a capital letter to distinguish them from variable names.
+
+> Warning: One of the easiest mistakes to make in C++ is to forget the semicolon at the end of a struct declaration. This will cause a compiler error on the next line of code.
+
+#### Accessing struct members
+
+In order to access the individual members, we use the `member selection operator`__(which is a period)__.
+
+#### Initializing structs
+
+```cpp
+struct Employee
+{
+    short id;
+    int age;
+    double wage;
+};
+
+Employee joe = { 1, 32, 60000.0 }; // joe.id = 1, joe.age = 32, joe.wage = 60000.0
+Employee frank = { 2, 28 }; // frank.id = 2, frank.age = 28, frank.wage = 0.0 (default initialization)
+
+// In C++11, we can also use uniform initialization:
+Employee joe { 1, 32, 60000.0 };
+// joe.id = 1, joe.age = 32, joe.wage = 60000.0
+
+Employee frank { 2, 28 };
+// frank.id = 2, frank.age = 28, frank.wage = 0.0 (default initialization)
+```
+
+#### C++11/14: Non-static member initialization
+
+Starting with C++11, it’s possible to give non-static (normal) struct members a default value:
+
+```cpp
+struct Rectangle
+{
+    double length = 1.0;
+    double width = 1.0;
+};
+
+int main()
+{
+    Rectangle x; // length = 1.0, width = 1.0
+
+    x.length = 2.0; // you can assign other values like normal
+
+    return 0;
+}
+```
+
+Unfortunately, in C++11, __the non-static member initialization syntax is incompatible with the initializer list and uniform initialization syntax__. You’ll have to decide whether you want to use non-static member initialization or uniform initialization.
+
+> Uniform initialization is more flexible, so we recommend sticking with that one.
+
+```cpp
+// this won't compile
+struct Rectangle
+{
+  double length = 1.0; // non-static member initialization
+  double width = 1.0;
+};
+
+int main()
+{
+  Rectangle x{ 2.0, 2.0 }; // uniform initialization
+
+  return 0;
+}
+```
+
+However, in C++14, this restriction was lifted and both can be used.
+
+#### Assigning to structs
+
+```cpp
+struct Employee
+{
+    short id;
+    int age;
+    double wage;
+};
+
+Employee joe;
+joe = { 1, 32, 60000.0 }; // C++11 only
+/* prior to C++11 have to assign separately
+  joe.id = 1;
+  joe.age = 32;
+  joe.wage = 60000.0;
+*/
+```
+
+#### Nested structs
+
+Structs can contain other structs.
+
+```cpp
+struct Employee
+{
+    short id;
+    int age;
+    double wage;
+};
+
+struct Company
+{
+    Employee CEO; // Employee is a struct within the Company struct
+    int numberOfEmployees;
+};
+
+Company myCompany = {{ 1, 42, 60000.0f }, 5 };
+```
+
+#### Struct size and data structure alignment
+
+we can expect `Employee` struct should have 2 + 4 + 8 = 14 bytes, but actually we should use the `sizeof` operator:
+
+```cpp
+struct Employee
+{
+    short id;
+    int age;
+    double wage;
+};
+
+int main()
+{
+    std::cout << "The size of Employee is " << sizeof(Employee) << "\n";
+
+    return 0;
+}
+
+// The size of Employee is 16
+```
+
+we can only say that the size of a struct __will be at least as large as the size of all the variables it contains. But it could be larger__! For performance reasons, the compiler will sometimes add gaps into structures (this is called __padding__).
+
+#### Accessing structs across multiple files
+
+Because struct declarations do not take any memory, if you want to share a struct declaration across multiple files (so you can instantiate variables of that struct type in multiple files), __put the struct declaration in a header file, and #include that header file anywhere you need it__.
+
+Struct variables are subject to the same rules as normal variables. Consequently, __to make a struct variable accessible across multiple files, you can use the `extern` keyword to do so__.
+
+## 4.8 `auto` keyword
+
+The auto keyword was a way to explicitly specify that a variable should have automatic duration:
+
+```cpp
+int main()
+{
+  auto int foo(5); // explicitly specify that foo should have automatic duration
+
+  return 0;
+}
+```
+
+__Since all variables in modern C++ default to automatic duration unless otherwise specified, the `auto` keyword was superfluous, and thus obsolete__.
+
+#### Type inference in C++11
+
+In C++11, the meaning of the auto keyword has changed.
+
+Starting with C++11, the `auto` keyword does just that. When initializing a variable, the `auto` keyword can be used in place of the variable type to tell the compiler to infer the variable’s type from the initializer’s type. This is called __type inference (also sometimes called type deduction)__.
+
+```cpp
+auto d = 5.0; // 5.0 is a double literal, so d will be type double
+auto i = 1 + 2; // 1 + 2 evaluates to an integer, so i will be type int
+
+// This even works with the return values from functions:
+int add(int x, int y)
+{
+    return x + y;
+}
+
+int main()
+{
+    auto sum = add(5, 6);
+    // add() returns an int, so sum will be type int
+    return 0;
+}
+```
+
+> __The `auto` keyword can’t be used with function parameters__
+
+```cpp
+#include <iostream>
+
+// compile error
+void addAndPrint(auto x, auto y)
+{
+    std::cout << x + y;
+}
+```
+
+#### Type inference for functions in C++14
+
+In C++14, the `auto` keyword was extended to be able to auto-deduce a function’s return type. Consider:
+
+```cpp
+auto add(int x, int y)
+{
+    return x + y;
+}
+```
+
+> but we should avoid this to make function definition with clear return type instead.
+
+#### Trailing return type syntax in C++11
+
+C++11 also added the ability to use a trailing return syntax, __where the return type is specified after the rest of the function prototype__.
+
+```cpp
+int add(int x, int y);
+
+// equivalent in C++11
+auto add(int x, int y) -> int;
+```
+
+__In this case, auto does not perform type inference, it is just part of the syntax to use a trailing return type__.
+
+Why would you want to use this?
+
+One nice thing is that it makes all of your function names line up:
+
+```cpp
+auto add(int x, int y) -> int;
+auto divide(double x, double y) -> double;
+auto printSomething() -> void;
+auto generateSubstring(const std::string &s, int start, int len) -> std::string;
+```
+
+But it is of more use when combined with some advanced C++ features, such as classes and the decltype keyword.
+
+For now, we recommend the continued use of the traditional function return syntax.
