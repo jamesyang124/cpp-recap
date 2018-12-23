@@ -2316,3 +2316,15 @@ auto generateSubstring(const std::string &s, int start, int len) -> std::string;
 But it is of more use when combined with some advanced C++ features, such as classes and the decltype keyword.
 
 For now, we recommend the continued use of the traditional function return syntax.
+
+## 6.6 C-style strings
+
+will recheck from 6.6 to 6.16, must check 6.11 reference variables.
+
+## 12.2 Virtual functions and polymorphism
+
+will recheck from 12.1 to 12.10
+
+## 13 Templates
+
+will recheck from 13.1 to 13.8
