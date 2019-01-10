@@ -2321,6 +2321,9 @@ For now, we recommend the continued use of the traditional function return synta
 
 will recheck from 6.6 to 6.16, must check 6.11 reference variables.
 
+- https://stackoverflow.com/questions/57483/what-are-the-differences-between-a-pointer-variable-and-a-reference-variable-in?page=1&tab=votes#tab-top
+
+
 ## 12.2 Virtual functions and polymorphism
 
 will recheck from 12.1 to 12.10
