@@ -2619,7 +2619,251 @@ int main()
 }
 ```
 
-will recheck from 6.8 to 6.16, must check 6.11 reference variables.
+## 6.8 Array Decays to Pointer
+
+When a fixed array is used in an expression, __the fixed array will _decay_ (be implicitly converted) into a pointer that points to the first element of the array__.
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int array[5] = { 9, 7, 5, 3, 1 };
+
+    // print address of the array's first element
+    std::cout << "Element 0 has address: " << &array[0] << '\n';
+
+    // print the value of the pointer the array decays to
+    std::cout << "The array decays to a pointer holding address: " << array << '\n';
+
+    return 0;
+}
+
+/*
+Element 0 has address: 0042FD5C
+The array decays to a pointer holding address: 0042FD5C
+ */
+```
+
+All elements of the array can still be accessed through the pointer (we’ll see how this works in the next lesson), __but information derived from the array’s type (such as how long the array is) can not be accessed from the pointer__.
+
+```cpp
+int array[5] = { 9, 7, 5, 3, 1 };
+
+// dereferencing an array returns the first element (element 0)
+cout << *array; // will print 9!
+
+char name[] = "Jason"; // C-style string (also an array)
+cout << *name; // will print 'J'
+```
+
+Note that we’re not actually dereferencing the array itself.
+
+The array (of type `int[5]`) gets implicitly converted into a pointer (of type `int *`), and we dereference the pointer to get the value at the memory address the pointer is holding (the value of the first element of the array).
+
+#### Differences between pointers and fixed arrays
+
+The primary difference occurs when using the `sizeof()` operator. __When used on a fixed array, `sizeof` returns the size of the entire array (array length `*` element size)__. When used on a pointer, `sizeof` returns the size of a memory address (in bytes).
+
+```cpp
+#include <iostream>
+
+int main()
+{
+  int array[5] = { 9, 7, 5, 3, 1 };
+
+  std::cout << sizeof(array) << '\n';
+  // will print sizeof(int) * array length
+  int* ptr = array;
+  std::cout << sizeof(ptr) << '\n';
+  // will print the size of a pointer
+
+  return 0;
+}
+// 20
+// 4
+```
+
+The second difference occurs when using the address-of operator (`&`). Taking the address of a pointer yields the memory address of the pointer variable.
+
+Taking the address of the array returns a pointer to the entire array. This pointer also points to the first element of the array, __but the type information is different (in the above example, `int(*)[5]`)__.
+
+#### Revisiting passing fixed arrays to functions
+
+we mentioned that because copying large arrays can be very expensive, C++ does not copy an array when an array is passed into a function. __When passing an array as an argument to a function, a fixed array decays into a pointer, and the pointer is passed to the function__:
+
+```cpp
+#include <iostream>
+
+void printSize(int *array)
+{
+    // array is treated as a pointer here
+    std::cout << sizeof(array) << '\n'; // prints the size of a pointer, not the size of the array!
+}
+
+int main()
+{
+    int array[] = { 1, 1, 2, 3, 5, 8, 13, 21 };
+    std::cout << sizeof(array) << '\n'; // will print sizeof(int) * array length
+
+    printSize(array); // the array argument decays into a pointer here
+
+     return 0;
+}
+
+// 32
+// 4
+
+// Note that this happens even if the parameter is declared as a fixed array:
+
+#include <iostream>
+
+// C++ will implicitly convert parameter array[] to *array
+void printSize(int array[])
+{
+    // array is treated as a pointer here, not a fixed array
+    std::cout << sizeof(array) << '\n'; // prints the size of a pointer, not the size of the array!
+}
+
+int main()
+{
+    int array[] = { 1, 1, 2, 3, 5, 8, 13, 21 };
+    std::cout << sizeof(array) << '\n'; // will print sizeof(int) * array length
+
+    printSize(array); // the array argument decays into a pointer here
+
+     return 0;
+}
+
+// 32
+// 4
+```
+
+C++ implicitly converts parameters using the array syntax (`[]`) to the pointer syntax (`*`). That means the following two function declarations are identical:
+
+```cpp
+void printSize(int array[]);
+void printSize(int *array);
+```
+
+Some programmers prefer using the `[]` syntax because it makes it clear that the function is expecting an array, not just a pointer to a value.
+
+However, in most cases, __because the pointer doesn’t know how large the array is, you’ll need to pass in the array size as a separate parameter anyway (strings being an exception because they’re null terminated)__.
+
+We lightly recommend using the pointer syntax, because it makes it clear that the parameter is being treated as a pointer, not a fixed array, and that certain operations, such as `sizeof()`, will operate as if the parameter is a pointer.
+
+> Recommendation: Favor the pointer syntax (`*`) over the array syntax (`[]`) for array function parameters.
+
+#### Arrays in structs and classes don’t decay
+
+__Arrays that are part of structs or classes do not decay when the whole struct or class is passed to a function__.
+
+This yields a useful way to prevent decay if desired, and will be valuable later when we write classes that utilize arrays.
+
+#### Arrays are laid out sequentially in memory
+
+When calculating the result of a pointer arithmetic expression, the compiler always multiplies the integer operand by the size of the object being pointed to. This is called __scaling__.
+
+By using the address-of operator (`&`), we can determine that arrays are laid out sequentially in memory. That is, elements 0, 1, 2, … are all adjacent to each other, in order.
+
+It turns out that when the compiler sees the subscript operator (`[]`), __it actually translates that into a pointer addition and dereference__!
+
+__Generalizing, `array[n]` is the same as `*(array + n)`, where `n` is an integer__
+
+## 6.8b C-style String Symbolic Constants
+
+C++ also supports a way to create C-style string symbolic constants using pointers:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    char myName[] = "Alex";
+    // fixed array
+    std::cout << myName;
+
+    const char* myName2 = "Alex";
+    // pointer to symbolic constant
+    std::cout << myName2;
+
+    return 0;
+}
+```
+
+C++ deals with the memory allocation for these slightly differently.
+
+In the fixed array case, the program allocates memory for a fixed array of length 5, and initializes that memory with the string `Alex\0`.
+
+Because memory has been specifically allocated for the array, you’re free to alter the contents of the array. The array itself is treated __as a normal local variable, so when the array goes out of scope, the memory used by the array is freed up for other uses__.
+
+In the symbolic constant case, how the compiler handles this is implementation defined. __What usually happens is that the compiler places the string `Alex\0` into read-only memory somewhere, and then sets the pointer to point to it__. Because this memory may be read-only, __best practice is to make sure the string is `const`__.
+
+```cpp
+const char *name1 = "Alex";
+const char *name2 = "Alex";
+```
+
+These are two different string literals with the same value.
+
+The compiler may opt to combine these into a single shared string literal, with both `name1` and `name2` pointed at the same address. Thus, __if `name1` was not `const`, making a change to `name1` could also impact `name2` (which might not be expected)__.
+
+As a result of string literals being stored in a fixed location in memory, __string literals have static duration rather than automatic duration (that is, they die at the end of the program, not the end of the block in which they are defined). That means that when we use string literals, we don’t have to worry about scoping issues__. Thus, the following is okay:
+
+```cpp
+const char* getName()
+{
+    return "Alex";
+}
+```
+
+If this function were returning any other kind of literal by address, the literal would be destroyed at the end of `getName()`, and __we’d return a dangling pointer back to the caller. However, because string literals have static duration, `Alex` will not be destroyed when `getName()` terminates, so the caller can still successfully access it__.
+
+> Rule: Feel free to use C-style string symbolic constants if you need read-only strings in your program, but always make them `const`!
+
+#### `std::cout` and char pointers
+
+At this point, you may have noticed something interesting about the way `std::cout` handles pointers of different types.
+
+Consider the following example:
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    int nArray[5] = { 9, 7, 5, 3, 1 };
+    char cArray[] = "Hello!";
+    const char* name = "Alex";
+
+    std::cout << nArray << '\n'; // nArray will decay to type int*
+    std::cout << cArray << '\n'; // cArray will decay to type char*
+    std::cout << name << '\n'; // name is already type char*
+
+    char c = 'Q';
+    std::cout << &c;
+
+    return 0;
+}
+// 003AF738
+// Hello!
+// Alex
+// Q╠╠╠╠╜╡4;¿■A
+```
+
+Why did the int array print an address, but the character arrays printed strings?
+
+The answer is that `std::cout` makes some assumptions about your intent. __If you pass it a non-char pointer, it will simply print the contents of that pointer (the address that the pointer is holding)__.
+
+However, __if you pass it an object of type `char*` or `const char*`, it will assume you’re intending to print a string__. Consequently, instead of printing the pointer’s value, it will print the string being pointed to instead!
+
+For `char c`, it assumed `&c` (which has type `char*`) was a string. So it printed the ‘Q’, and then kept going.
+
+Next in memory was a bunch of garbage. __Eventually, it ran into some memory holding a 0 value, which it interpreted as a null terminator__, so it stopped. What you see may be different depending on what’s in memory after variable.
+
+## 6.9
+
+will recheck from 6.9 to 6.16, must check 6.11 reference variables.
 
 - https://stackoverflow.com/questions/57483/what-are-the-differences-between-a-pointer-variable-and-a-reference-variable-in?page=1&tab=votes#tab-top
 
