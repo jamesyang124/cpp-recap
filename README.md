@@ -2319,10 +2319,309 @@ For now, we recommend the continued use of the traditional function return synta
 
 ## 6.6 C-style strings
 
-will recheck from 6.6 to 6.16, must check 6.11 reference variables.
+A C-style string is simply an array of characters that uses a null terminator.
+
+A null terminator is a special character (`\0`, ascii code `0`) used to indicate the end of the string. More generically, A __C-style string is called a null-terminated string__.
+
+```cpp
+#include <iostream>
+#include <iterator> // for std::size
+
+int main()
+{
+    char myString[] = "string";
+    const int length = std::size(myString);
+    //  const int length = sizeof(myString) / sizeof(myString[0]);
+    // use instead if not C++17 capable
+
+    std::cout << myString<< " has " << length << " characters.\n";
+    for (int index = 0; index < length; ++index)
+        std::cout << static_cast<int>(myString[index]) << " ";
+
+    return 0;
+}
+
+/*
+string has 7 characters.
+115 116 114 105 110 103 0
+*/
+```
+
+When declaring strings in this manner, __it is a good idea to use `[]` and let the compiler calculate the length of the array__. That way if you change the string later, you won’t have to manually adjust the array length.
+
+One important point to note is that __C-style strings follow all the same rules as arrays__. This means you can initialize the string upon creation, __but you can not assign values to it using the assignment operator after that!__
+
+```cpp
+char myString[] = "string"; // ok
+myString = "rope"; // not ok!
+```
+
+When printing a C-style string, `std::cout` prints characters __until it encounters the null terminator__.
+
+If you accidentally overwrite the null terminator in a string (e.g. by assigning something to `myString[6]`), __you’ll not only get all the characters in the string, but `std::cout` will just keep printing everything in adjacent memory slots until it happens to hit a `0`!__
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    char name[20] = "Alex";
+    // only use 5 characters (4 letters + null terminator)
+    std::cout << "My name is: " << name << '\n';
+
+    return 0;
+}
+```
+
+n this case, the string __Alex__ will be printed, and __`std::cout` will stop at the null terminator. The rest of the characters in the array are ignored__.
+
+#### `std::cin`
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    char name[255];
+    // declare array large enough to hold 255 characters
+    std::cout << "Enter your name: ";
+    std::cin >> name;
+    std::cout << "You entered: " << name << '\n';
+
+    return 0;
+}
+```
+
+it is poor programming practice, because nothing is stopping the user from entering more than 255 characters.
+
+use `std::getline` instead:
+
+```cpp
+#include <iostream>
+int main()
+{
+    char name[255]; // declare array large enough to hold 255 characters
+    std::cout << "Enter your name: ";
+    std::cin.getline(name, 255);
+    std::cout << "You entered: " << name << '\n';
+
+    return 0;
+}
+```
+
+This call to `cin.getline()` will read up to 254 characters into name (__leaving room for the null terminator!). Any excess characters will be discarded__.
+
+#### Manipulating C-style strings
+
+by `cstring.h` lib:
+
+```cpp
+#include <cstring>
+int main()
+{
+    char source[] = "Copy this!";
+    char dest[50];
+    strcpy(dest, source);
+    std::cout << dest; // prints "Copy this!"
+
+    return 0;
+}
+```
+
+However, `strcpy()` can easily cause array overflows if you’re not careful!
+
+Use `strncpy()` instead, which allows you to specify the size of the buffer, and ensures overflow doesn’t occur. Unfortunately, __`strncpy()` doesn’t ensure strings are null terminated, which still leaves plenty of room for array overflow__.
+
+In C++11, `strcpy_s()` is preferred, which adds a new parameter to define the size of the destination. However, not all compilers support this function, and to use it, you have to define __STDC_WANT_LIB_EXT1__ with integer value 1.
+
+```cpp
+#define __STDC_WANT_LIB_EXT1__ 1
+#include <cstring> // for strcpy_s
+int main()
+{
+    char source[] = "Copy this!";
+    char dest[5]; // note that the length of dest is only 5 chars!
+    strcpy_s(dest, 5, source); // An runtime error will occur in debug mode
+    std::cout << dest;
+
+    return 0;
+}
+
+// strlcpy() is a popular alternative
+```
+
+Another useful function is the strlen() function, which returns the length of the C-style string (__without the null terminator__).
+
+```cpp
+#include <iostream>
+#include <cstring>
+#include <iterator> // for std::size
+
+int main()
+{
+    char name[20] = "Alex"; // only use 5 characters (4 letters + null terminator)
+    std::cout << "My name is: " << name << '\n';
+    std::cout << name << " has " << strlen(name) << " letters.\n";
+    std::cout << name << " has " << std::size(name) << " characters in the array.\n"; // use sizeof(name) / sizeof(name[0]) if not C++17 capable
+
+    return 0;
+}
+
+/*
+My name is: Alex
+Alex has 4 letters.
+Alex has 20 characters in the array.
+*/
+
+/*
+Other useful functions:
+strcat()
+Appends one string to another (dangerous)
+
+strncat()
+Appends one string to another (with buffer length check)
+
+strcmp()
+Compare two strings (returns 0 if equal)
+
+strncmp()
+Compare two strings up to a specific number of characters (returns 0 if equal)
+ */
+```
+
+Don’t use C-style strings if `std::string` applicable.
+
+## 6.7 Pointers
+
+The size of a pointer is dependent upon the architecture the executable is compiled for, __a 32-bit executable uses 32-bit memory addresses__.
+
+```cpp
+char *chPtr; // chars are 1 byte
+int *iPtr; // ints are usually 4 bytes
+struct Something
+{
+    int nX, nY, nZ;
+};
+Something *somethingPtr; // Something is probably 12 bytes
+
+std::cout << sizeof(chPtr) << '\n'; // prints 4
+std::cout << sizeof(iPtr) << '\n'; // prints 4
+std::cout << sizeof(somethingPtr) << '\n'; // prints 4
+```
+
+Should care about the segmentation fault issue.
+
+## 6.7a Null Pointers
+
+Besides memory addresses, there is one additional value that a pointer can hold: a `null` value. A `null` value is a special value that means the pointer is not pointing at anything.
+
+A pointer holding a null value is called a __null pointer__.
+
+In C++, we can assign a pointer a null value __by initializing or assigning it the literal `0`__:
+
+```cpp
+float *ptr { 0 };  // ptr is now a null pointer
+
+float *ptr2; // ptr2 is uninitialized
+ptr2 = 0; // ptr2 is now a null pointer
+
+// Pointers convert to boolean false if they are null
+// Therefore, we can test whether a pointer is null or not:
+
+if (ptr)
+    cout << "ptr is pointing to a double value.";
+else
+    cout << "ptr is a null pointer.";
+```
+
+> Best practice: Initialize your pointers to a null value if you’re not giving them another value.
+
+#### Dereferencing null pointers
+
+Dereferencing a null pointer also results in undefined behavior. __In most cases, it will crash your application__.
+
+#### The NULL macro
+
+In C++, there is a special preprocessor macro called `NULL` (defined in the `<cstddef>` header). This macro was inherited from C, where it is commonly used to indicate a null pointer.
+
+```cpp
+#include <cstddef> // for NULL
+
+double *ptr { NULL }; // ptr is a null pointer
+```
+
+Note that the value of `0` isn’t a pointer type, so assigning `0` (or `NULL`, pre-C++11) to a pointer to denote that the pointer is a null pointer is a little inconsistent.
+
+In rare cases, when used as a literal argument, __it can even cause problems because the compiler can’t tell whether we mean a null pointer or the integer `0`__:
+
+```cpp
+#include <iostream>
+#include <cstddef> // for NULL
+
+void print(int x)
+{
+  std::cout << "print(int): " << x << '\n';
+}
+
+void print(int *x)
+{
+  if (!x)
+    std::cout << "print(int*): null\n";
+  else
+    std::cout << "print(int*): " << *x << '\n';
+}
+
+int main()
+{
+  int *x { NULL };
+  print(x);
+  // calls print(int*) because x has type int*
+  print(0);
+  // calls print(int) because 0 is an integer literal
+  print(NULL);
+  // likely calls print(int), although we probably wanted print(int*)
+
+  return 0;
+}
+```
+
+To address the above issues, C++11 introduces a new keyword called `nullptr`. `nullptr` is both a keyword and an __rvalue constant__, much like the boolean keywords true and false are.
+
+```cpp
+int *ptr { nullptr };
+// note: ptr is still an integer pointer, just set to a null value
+```
+
+nullptr is implicitly converted to an integer pointer, and then the value of `nullptr` assigned to `ptr`. This has the effect of making integer pointer `ptr` a null pointer.
+
+> Best practice: With C++11, use nullptr to initialize your pointers to a null value.
+
+#### `std::nullptr_t` in C++11
+
+C++11 also introduces a new type called `std::nullptr_t` (in header `<cstddef>`). `std::nullptr_t` can only hold one value: `nullptr`!
+
+While this may seem kind of silly, it’s useful in one situation. If we want to write a function that accepts only a nullptr argument, what type do we make the parameter? The answer is `std::nullptr_t`.
+
+```cpp
+#include <iostream>
+#include <cstddef> // for std::nullptr_t
+
+void doSomething(std::nullptr_t ptr)
+{
+    std::cout << "in doSomething()\n";
+}
+
+int main()
+{
+    doSomething(nullptr); // call doSomething with an argument of type std::nullptr_t
+
+    return 0;
+}
+```
+
+will recheck from 6.8 to 6.16, must check 6.11 reference variables.
 
 - https://stackoverflow.com/questions/57483/what-are-the-differences-between-a-pointer-variable-and-a-reference-variable-in?page=1&tab=votes#tab-top
-
 
 ## 12.2 Virtual functions and polymorphism
 
