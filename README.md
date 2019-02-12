@@ -3053,9 +3053,119 @@ C++ provides a resizable array as part of the standard library called `std::vect
 
 ## 6.10 Pointers and const
 
-_TBC_
+```cpp
+const int value = 5; // value is const
+int *ptr = &value;
+// compile error: cannot convert const int* to int*
+*ptr = 6; // change value to 6
+```
 
-will recheck from 6.10 to 6.16, must check 6.11 reference variables.
+A pointer to a `const` value is a (non-const) pointer that points to a constant value:
+
+```cpp
+const int value = 5;
+const int *ptr = &value; // this is okay, ptr is a non-const pointer that is pointing to a "const int"
+*ptr = 6; // not allowed, we can't change a const value
+
+int value = 5;
+const int *ptr = &value; // ptr points to a "const int"
+value = 6;
+// the value is non-const when accessed through a non-const identifier
+```
+
+A pointer to a constant variable treats the variable as constant when it is accessed through the pointer, __regardless of whether the variable was initially defined as const or not__
+
+```cpp
+int value = 5;
+const int *ptr = &value; // ptr points to a "const int"
+*ptr = 6; // ptr treats its value as const, so changing the value through ptr is not legal
+```
+
+Because a pointer to a const value is not const itself (it just points to a const value), the pointer can be redirected to point at other values:
+
+```cpp
+int value1 = 5;
+const int *ptr = &value1; // ptr points to a const int
+
+int value2 = 6;
+ptr = &value2; // okay, ptr now points at some other const int
+```
+
+#### Const pointers
+
+To declare a const pointer, use the __`const` keyword between the asterisk and the pointer name__:
+
+```cpp
+int value1 = 5;
+int value2 = 6;
+
+int * const ptr = &value1; // okay, the const pointer is initialized to the address of value1
+ptr = &value2; // not okay, once initialized, a const pointer can not be changed.
+```
+
+However, because the value being pointed to is still non-const, it is possible to change the value being pointed to via dereferencing the const pointer:
+
+```cpp
+int value = 5;
+int *const ptr = &value; // ptr will always point to value
+*ptr = 6; // allowed, since ptr points to a non-const int
+```
+
+#### Const Pointer To a Const Value
+
+```cpp
+int value = 5;
+const int *const ptr = &value;
+ptr = &value2; // not okay,
+*ptr = 6; // disallowed
+
+int value = 5;
+const int *ptr1 = &value;
+// ptr1 points to a "const int", so this is a pointer to a const value.
+int *const ptr2 = &value;
+// ptr2 points to an "int", so this is a const pointer to a non-const value.
+const int *const ptr3 = &value;
+// ptr3 points to a "const int", so this is a const pointer to a const value.
+```
+
+## 6.11 Reference Variables
+
+A reference is a type of C++ variable __that acts as an alias to another object or value__.
+
+```cpp
+int value = 5; // normal integer
+int &ref = value; // reference to variable value
+
+// as alias
+int x = 5; // normal integer
+int &y = x; // y is a reference to x
+int &z = y; // z is also a reference to x
+
+#include <iostream>
+
+int main()
+{
+    int value = 5; // normal integer
+    int &ref = value; // reference to variable value
+
+    value = 6; // value is now 6
+    ref = 7; // value is now 7
+
+    std::cout << value; // prints 7
+    ++ref;
+    std::cout << value; // prints 8
+
+    return 0;
+}
+
+// 7
+// 8 
+
+cout << &value; // prints 0012FF7C
+cout << &ref; // prints 0012FF7C
+```
+
+will recheck from 6.11 to 6.16, must check 6.11 reference variables.
 
 - https://stackoverflow.com/questions/57483/what-are-the-differences-between-a-pointer-variable-and-a-reference-variable-in?page=1&tab=votes#tab-top
 
